@@ -196,8 +196,6 @@ class SmashMetricsUI(QMainWindow):
         main_layout.addWidget(sidebar)
 
     def handle_exit_and_logout(self):
-        self.google_authenticator.logout(self)
-
         self.close()
 
         if self.nav_buttons:
@@ -562,6 +560,12 @@ class SmashMetricsUI(QMainWindow):
                 self.setStyleSheet(self.styleSheet() + f.read())
         except FileNotFoundError:
             print("⚠ Arquivo \'styles.css\' não encontrado. O aplicativo usará o estilo padrão.")
+
+    def closeEvent(self, event):
+
+        if hasattr(self, "google_authenticator"):
+            self.google_authenticator.logout(self)
+        event.accept()
 
 
 class LoginScreen(QWidget):
