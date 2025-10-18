@@ -17,7 +17,6 @@ if __name__ == "__main__":
         print("⚠ Arquivo \'styles.css\' não encontrado. O aplicativo usará o estilo padrão.")
 
     google_authenticator = GoogleAuthenticator()
-
     main_window = SmashMetricsUI()
     main_window.setWindowIcon(QIcon(icon_path))
 
