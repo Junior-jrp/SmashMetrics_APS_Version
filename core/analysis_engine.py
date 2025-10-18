@@ -1,5 +1,7 @@
 import numpy as np
 from PySide6.QtWidgets import QMessageBox, QInputDialog
+from core.database import DatabaseManager, AnaliseCRUD
+
 
 class AnalysisEngine:
     def __init__(self, ui_context, image_processor):
@@ -46,3 +48,7 @@ class AnalysisEngine:
             f"- Velocidade: {velocity_kmh:.2f} km/h"
         )
         QMessageBox.information(self.ui, "Resultados da Análise", report_content)
+
+
+        db = DatabaseManager()
+        analise_crud = AnaliseCRUD(db)

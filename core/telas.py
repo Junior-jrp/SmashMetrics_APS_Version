@@ -5,11 +5,15 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPixmap, QFont, QIcon, QImage
 from PySide6.QtCore import Qt, QDate
+
+from core.database import DatabaseManager
 from core.funcionalidades import Funcionalidades
 from core.google_auth import GoogleAuthenticator
 from core.image_processor import ImageProcessor
 from core.calibration_manager import CalibrationManager
 from core.analysis_engine import AnalysisEngine
+from core.crud_screens import SeguradorasCRUDScreen, AnaliseCRUDScreen
+from core.theme import Styles, Colors, Icons, BorderRadius, Typography
 
 
 class ModernCard(QFrame):
@@ -26,54 +30,37 @@ class ModernCard(QFrame):
         if icon_text:
             icon_label = QLabel(icon_text)
             icon_label.setAlignment(Qt.AlignCenter)
-            icon_label.setStyleSheet("""
-                QLabel {
-                    font-size: 32px;
-                    color: #00bcd4;
-                    font-weight: bold;
-                }
+            icon_label.setStyleSheet(f"""
+                QLabel {{
+                    font-size: {Typography.SIZE_XLARGE};
+                    color: {Colors.CYAN_PRIMARY};
+                    font-weight: {Typography.WEIGHT_BOLD};
+                    background-color: transparent;
+                }}
             """)
             layout.addWidget(icon_label)
 
         if title:
             title_label = QLabel(title)
             title_label.setAlignment(Qt.AlignCenter)
-            title_label.setStyleSheet("""
-                QLabel {
-                    font-size: 18px;
-                    font-weight: bold;
-                    color: #ffffff;
-                    margin: 5px 0;
-                    background-color: transparent;
-                }
-            """)
+            title_label.setStyleSheet(Styles.label_normal())
             layout.addWidget(title_label)
 
         if description:
             desc_label = QLabel(description)
             desc_label.setAlignment(Qt.AlignCenter)
             desc_label.setWordWrap(True)
-            desc_label.setStyleSheet("""
-                QLabel {
-                    font-size: 14px;
-                    color: #b0b0b0;
+            desc_label.setStyleSheet(f"""
+                QLabel {{
+                    font-size: {Typography.SIZE_NORMAL};
+                    color: {Colors.TEXT_SECONDARY};
                     line-height: 1.4;
                     background-color: transparent;
-                }
+                }}
             """)
             layout.addWidget(desc_label)
 
-        self.setStyleSheet("""
-            ModernCard {
-                background-color: #3a404a;
-                border-radius: 12px;
-                border: 1px solid #4a5568;
-            }
-            ModernCard:hover {
-                background-color: #434a56;
-                border: 1px solid #00bcd4;
-            }
-        """)
+        self.setStyleSheet(Styles.card())
 
 
 class SidebarButton(QPushButton):
@@ -81,31 +68,7 @@ class SidebarButton(QPushButton):
         super().__init__(parent)
         self.setText(f"  {icon_text}  {text}")
         self.setCheckable(True)
-        self.setup_style()
-
-    def setup_style(self):
-        self.setStyleSheet("""
-            SidebarButton {
-                text-align: left;
-                padding: 15px 20px;
-                font-size: 14px;
-                font-weight: 500;
-                color: #b0b0b0;
-                background-color: transparent;
-                border: none;
-                border-radius: 8px;
-                margin: 2px 8px;
-            }
-            SidebarButton:hover {
-                background-color: #3a404a;
-                color: #ffffff;
-            }
-            SidebarButton:checked {
-                background-color: #00bcd4;
-                color: #ffffff;
-                font-weight: bold;
-            }
-        """)
+        self.setStyleSheet(Styles.sidebar_button())
 
 
 class SmashMetricsUI(QMainWindow):
@@ -118,6 +81,8 @@ class SmashMetricsUI(QMainWindow):
         self.calibration_manager = CalibrationManager(self, self.image_processor)
         self.analysis_engine = AnalysisEngine(self, self.image_processor)
         self.funcionalidades.analysis_engine = self.analysis_engine
+
+        self.db_manager = DatabaseManager()
 
         self.setWindowTitle("SmashMetrics - Análise Forense de Colisões")
         self.setGeometry(100, 100, 1400, 900)
@@ -148,12 +113,7 @@ class SmashMetricsUI(QMainWindow):
     def create_sidebar(self, main_layout):
         sidebar = QWidget()
         sidebar.setFixedWidth(200)
-        sidebar.setStyleSheet("""
-            QWidget {
-                background-color: #1e2328;
-                border-right: 1px solid #4a5568;
-            }
-        """)
+        sidebar.setStyleSheet(Styles.sidebar())
 
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(0, 20, 0, 20)
@@ -161,35 +121,38 @@ class SmashMetricsUI(QMainWindow):
 
         logo_label = QLabel("SmashMetrics")
         logo_label.setAlignment(Qt.AlignCenter)
-        logo_label.setStyleSheet("""
-            QLabel {
-                font-size: 18px;
-                font-weight: bold;
-                color: #00bcd4;
+        logo_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: {Typography.SIZE_LARGE};
+                font-weight: {Typography.WEIGHT_BOLD};
+                color: {Colors.CYAN_PRIMARY};
                 padding: 20px 0;
                 margin-bottom: 20px;
-            }
+                background-color: transparent;
+            }}
         """)
         sidebar_layout.addWidget(logo_label)
 
         self.nav_buttons = []
 
         buttons_data = [
-            ("📊", "Início", self.show_dashboard),
-            ("📈", "Análise", self.show_analysis),
-            ("📋", "Relatório", self.show_report),
-            ("⚙️", "Sobre", self.show_about),
+            ("Início", self.show_dashboard),
+            ("Análise", self.show_analysis),
+            ("Seguradoras", self.show_seguradoras),
+            ("Gerenciar Análises", self.show_analises),
+            ("Relatório", self.show_report),
+            ("Sobre", self.show_about),
         ]
 
-        for icon, text, handler in buttons_data:
-            btn = SidebarButton(text, icon)
+        for text, handler in buttons_data:
+            btn = SidebarButton(text)
             btn.clicked.connect(handler)
             self.nav_buttons.append(btn)
             sidebar_layout.addWidget(btn)
 
         sidebar_layout.addStretch()
 
-        exit_btn = SidebarButton("Sair", "🚪")
+        exit_btn = SidebarButton("Sair", Icons.EXIT)
         exit_btn.clicked.connect(self.handle_exit_and_logout)
         sidebar_layout.addWidget(exit_btn)
 
@@ -197,9 +160,7 @@ class SmashMetricsUI(QMainWindow):
 
     def handle_exit_and_logout(self):
         self.google_authenticator.logout(self)
-
         self.close()
-
         if self.nav_buttons:
             self.nav_buttons[0].setChecked(True)
 
@@ -216,30 +177,39 @@ class SmashMetricsUI(QMainWindow):
         self.about_widget = self.create_about_screen()
         self.stacked_widget.addWidget(self.about_widget)
 
+        self.seguradoras_widget = SeguradorasCRUDScreen(self, self.db_manager)
+        self.stacked_widget.addWidget(self.seguradoras_widget)
+
+        self.analises_widget = AnaliseCRUDScreen(self, self.db_manager)
+        self.stacked_widget.addWidget(self.analises_widget)
+
     def show_dashboard(self):
         self.stacked_widget.setCurrentWidget(self.dashboard_widget)
-        for btn in self.nav_buttons:
-            btn.setChecked(False)
-        self.nav_buttons[0].setChecked(True)
+        self._update_nav(0)
 
     def show_analysis(self):
         self.stacked_widget.setCurrentWidget(self.analysis_widget)
-        for btn in self.nav_buttons:
-            btn.setChecked(False)
-        self.nav_buttons[1].setChecked(True)
+        self._update_nav(1)
 
     def show_report(self):
         self.stacked_widget.setCurrentWidget(self.report_widget)
-        for btn in self.nav_buttons:
-            btn.setChecked(False)
-        self.nav_buttons[2].setChecked(True)
+        self._update_nav(4)
 
     def show_about(self):
         self.stacked_widget.setCurrentWidget(self.about_widget)
-        for btn in self.nav_buttons:
-            btn.setChecked(False)
-        self.nav_buttons[3].setChecked(True)
+        self._update_nav(5)
 
+    def show_seguradoras(self):
+        self.stacked_widget.setCurrentWidget(self.seguradoras_widget)
+        self._update_nav(2)
+
+    def show_analises(self):
+        self.stacked_widget.setCurrentWidget(self.analises_widget)
+        self._update_nav(3)
+
+    def _update_nav(self, active_index):
+        for i, btn in enumerate(self.nav_buttons):
+            btn.setChecked(i == active_index)
 
     def create_dashboard_screen(self):
         widget = QWidget()
@@ -249,28 +219,14 @@ class SmashMetricsUI(QMainWindow):
 
         title = QLabel("SmashMetrics")
         title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 48px;
-                font-weight: bold;
-                color: #00bcd4;
-                margin-bottom: 10px;
-            }
-        """)
+        title.setStyleSheet(Styles.label_title())
         layout.addWidget(title)
 
         subtitle = QLabel(
             "Sistema de análise forense de colisões veiculares desenvolvido\nno IFCE - Campus Maracanaú"
         )
         subtitle.setAlignment(Qt.AlignCenter)
-        subtitle.setStyleSheet("""
-            QLabel {
-                font-size: 18px;
-                color: #b0b0b0;
-                margin-bottom: 30px;
-                line-height: 1.5;
-            }
-        """)
+        subtitle.setStyleSheet(Styles.label_subtitle())
         layout.addWidget(subtitle)
 
         icon_label = QLabel()
@@ -290,7 +246,7 @@ class SmashMetricsUI(QMainWindow):
         nova_analise_card = ModernCard(
             "Nova Análise",
             "Importe uma imagem e inicie o processo de análise forense",
-            "⚡"
+            Icons.LIGHTNING if hasattr(Icons, 'LIGHTNING') else "⚡"
         )
         nova_analise_card.mousePressEvent = lambda e: self.show_analysis()
         cards_layout.addWidget(nova_analise_card)
@@ -298,7 +254,7 @@ class SmashMetricsUI(QMainWindow):
         relatorios_card = ModernCard(
             "Relatórios",
             "Acesse os relatórios gerados das análises realizadas",
-            "📋"
+            Icons.REPORT
         )
         relatorios_card.mousePressEvent = lambda e: self.show_report()
         cards_layout.addWidget(relatorios_card)
@@ -306,7 +262,7 @@ class SmashMetricsUI(QMainWindow):
         sobre_card = ModernCard(
             "Sobre",
             "Saiba mais sobre o sistema e a metodologia utilizada",
-            "ℹ️"
+            Icons.INFO
         )
         sobre_card.mousePressEvent = lambda e: self.show_about()
         cards_layout.addWidget(sobre_card)
@@ -315,24 +271,7 @@ class SmashMetricsUI(QMainWindow):
 
         iniciar_btn = QPushButton("Iniciar Análise →")
         iniciar_btn.clicked.connect(self.show_analysis)
-        iniciar_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #00bcd4;
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: bold;
-                margin-top: 20px;
-            }
-            QPushButton:hover {
-                background-color: #00acc1;
-            }
-            QPushButton:pressed {
-                background-color: #0097a7;
-            }
-        """)
+        iniciar_btn.setStyleSheet(Styles.primary_button())
         layout.addWidget(iniciar_btn, alignment=Qt.AlignCenter)
 
         layout.addStretch()
@@ -345,29 +284,13 @@ class SmashMetricsUI(QMainWindow):
         layout.setSpacing(25)
 
         title = QLabel("Relatórios")
-        title.setStyleSheet("""
-              QLabel {
-                  font-size: 32px;
-                  font-weight: bold;
-                  color: #ffffff;
-                  margin-bottom: 20px;
-              }
-          """)
+        title.setStyleSheet(Styles.label_title())
         layout.addWidget(title)
 
         report_text = QTextEdit()
         report_text.setReadOnly(True)
         report_text.setText("Conteúdo do relatório será exibido aqui.")
-        report_text.setStyleSheet("""
-              QTextEdit {
-                  background-color: #3a404a;
-                  border: 1px solid #4a5568;
-                  border-radius: 8px;
-                  color: #ffffff;
-                  font-size: 14px;
-                  padding: 10px;
-              }
-          """)
+        report_text.setStyleSheet(Styles.input_field())
         layout.addWidget(report_text)
 
         layout.addStretch()
@@ -380,14 +303,7 @@ class SmashMetricsUI(QMainWindow):
         layout.setSpacing(25)
 
         title = QLabel("Sobre o SmashMetrics")
-        title.setStyleSheet("""
-              QLabel {
-                  font-size: 32px;
-                  font-weight: bold;
-                  color: #ffffff;
-                  margin-bottom: 20px;
-              }
-          """)
+        title.setStyleSheet(Styles.label_title())
         layout.addWidget(title)
 
         about_text = QLabel(
@@ -398,13 +314,7 @@ class SmashMetricsUI(QMainWindow):
             "<p>Versão: 1.0</p>"
         )
         about_text.setWordWrap(True)
-        about_text.setStyleSheet("""
-              QLabel {
-                  font-size: 14px;
-                  color: #b0b0b0;
-                  line-height: 1.5;
-              }
-          """)
+        about_text.setStyleSheet(Styles.label_normal())
         layout.addWidget(about_text)
 
         layout.addStretch()
@@ -417,14 +327,7 @@ class SmashMetricsUI(QMainWindow):
         layout.setSpacing(25)
 
         title = QLabel("Análise de Imagem de Colisão")
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 32px;
-                font-weight: bold;
-                color: #ffffff;
-                margin-bottom: 20px;
-            }
-        """)
+        title.setStyleSheet(Styles.label_title())
         layout.addWidget(title)
 
         image_container = QWidget()
@@ -434,42 +337,16 @@ class SmashMetricsUI(QMainWindow):
         self.image_label = QLabel()
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setMinimumHeight(400)
-        self.image_label.setText("Nenhuma imagem carregada\nClique em \'Importar Imagem\' para começar")
-        self.image_label.setStyleSheet("""
-            QLabel {
-                background-color: #3a404a;
-                border: 2px dashed #00bcd4;
-                border-radius: 12px;
-                color: #b0b0b0;
-                font-size: 16px;
-                padding: 20px;
-            }
-        """)
+        self.image_label.setText("Nenhuma imagem carregada\nClique em 'Importar Imagem' para começar")
+        self.image_label.setStyleSheet(Styles.image_placeholder())
         image_container_layout.addWidget(self.image_label)
 
-        self.remove_image_button = QPushButton("X")
+        self.remove_image_button = QPushButton(Icons.DELETE)
         self.remove_image_button.setFixedSize(30, 30)
-        self.remove_image_button.setStyleSheet("""
-            QPushButton {
-                background-color: #e74c3c;
-                color: white;
-                border: none;
-                border-radius: 15px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #d32f2f;
-            }
-            QPushButton:pressed {
-                background-color: #c0392b;
-            }
-        """)
+        self.remove_image_button.setStyleSheet(Styles.danger_button())
         self.remove_image_button.clicked.connect(self.image_processor.remove_image)
         self.remove_image_button.setVisible(False)
-
-        self.remove_image_button.move(self.image_label.width() - self.remove_image_button.width() - 10,
-                                       10)
+        self.remove_image_button.move(self.image_label.width() - self.remove_image_button.width() - 10, 10)
         self.image_label.installEventFilter(self)
 
         layout.addWidget(image_container)
@@ -478,45 +355,26 @@ class SmashMetricsUI(QMainWindow):
         buttons_layout.setSpacing(10)
         buttons_layout.setAlignment(Qt.AlignCenter)
 
-        button_style = """
-            QPushButton {
-                background-color: #3a404a;
-                color: #ffffff;
-                border: 1px solid #4a5568;
-                border-radius: 8px;
-                padding: 8px 15px;
-                font-size: 12px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #434a56;
-                border-color: #00bcd4;
-            }
-            QPushButton:pressed {
-                background-color: #2d3339;
-            }
-        """
-
         import_btn = QPushButton("📷 Importar")
         import_btn.clicked.connect(self.image_processor.import_image)
-        import_btn.setStyleSheet(button_style.replace("background-color: #3a404a;", "background-color: #00bcd4;"))
+        import_btn.setStyleSheet(Styles.primary_button())
         buttons_layout.addWidget(import_btn)
 
-        buttons_data = [
-            ("🔄", "8-bit", self.image_processor.convert_to_gray),
-            ("⚡", "Segmentar", self.image_processor.apply_watershed),
-            ("🎯", "Calibrar", self.calibration_manager.calibrate_image),
+        actions = [
+            ("🔄 8-bit", self.image_processor.convert_to_gray),
+            ("⚡ Segmentar", self.image_processor.apply_watershed),
+            ("🎯 Calibrar", self.calibration_manager.calibrate_image),
         ]
 
-        for icon, text, handler in buttons_data:
-            btn = QPushButton(f"{icon} {text}")
-            btn.clicked.connect(lambda _, h=handler: h())
-            btn.setStyleSheet(button_style)
+        for text, handler in actions:
+            btn = QPushButton(text)
+            btn.clicked.connect(handler)
+            btn.setStyleSheet(Styles.secondary_button())
             buttons_layout.addWidget(btn)
 
         calc_btn = QPushButton("📊 Calcular")
         calc_btn.clicked.connect(lambda: self.funcionalidades.handle_velocity_calculation(self, self.image_processor))
-        calc_btn.setStyleSheet(button_style.replace("background-color: #3a404a;", "background-color: #00bcd4;"))
+        calc_btn.setStyleSheet(Styles.primary_button())
         buttons_layout.addWidget(calc_btn)
 
         layout.addLayout(buttons_layout)
@@ -525,43 +383,32 @@ class SmashMetricsUI(QMainWindow):
 
     def eventFilter(self, obj, event):
         if obj == self.image_label and event.type() == event.Type.Resize:
-            self.remove_image_button.move(self.image_label.width() - self.remove_image_button.width() - 10,
-                                           10)
+            self.remove_image_button.move(self.image_label.width() - self.remove_image_button.width() - 10, 10)
         return super().eventFilter(obj, event)
 
     def display_image(self, image):
         if len(image.shape) == 2:
             height, width = image.shape
             bytes_per_line = width
-            q_image = QImage(image.data, width, height,
-                             bytes_per_line, QImage.Format_Grayscale8)
+            q_image = QImage(image.data, width, height, bytes_per_line, QImage.Format_Grayscale8)
         else:
             height, width, channel = image.shape
             bytes_per_line = 3 * width
-            q_image = QImage(image.data, width, height,
-                             bytes_per_line, QImage.Format_BGR888)
+            q_image = QImage(image.data, width, height, bytes_per_line, QImage.Format_BGR888)
 
         pixmap = QPixmap.fromImage(q_image)
-        self.image_label.setPixmap(
-            pixmap.scaled(self.image_label.size(),
-                          Qt.KeepAspectRatio,
-                          Qt.SmoothTransformation)
-        )
+        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
         self.remove_image_button.setVisible(True)
 
     def remove_image(self):
         self.original_image = None
         self.processed_image = None
         self.image_label.clear()
-        self.image_label.setText("Nenhuma imagem carregada\nClique em \'Importar Imagem\' para começar")
+        self.image_label.setText("Nenhuma imagem carregada\nClique em 'Importar Imagem' para começar")
         self.remove_image_button.setVisible(False)
 
     def apply_global_styles(self):
-        try:
-            with open("assets/styles.css", "r") as f:
-                self.setStyleSheet(self.styleSheet() + f.read())
-        except FileNotFoundError:
-            print("⚠ Arquivo \'styles.css\' não encontrado. O aplicativo usará o estilo padrão.")
+        self.setStyleSheet(Styles.main_window())
 
 
 class LoginScreen(QWidget):
@@ -580,76 +427,33 @@ class LoginScreen(QWidget):
         layout.setSpacing(30)
 
         title = QLabel("Bem-vindo ao SmashMetrics")
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 36px;
-                font-weight: bold;
-                color: #00bcd4;
-            }
-        """)
+        title.setStyleSheet(Styles.label_title())
         layout.addWidget(title, alignment=Qt.AlignCenter)
 
         subtitle = QLabel("Faça login para continuar")
-        subtitle.setStyleSheet("""
-            QLabel {
-                font-size: 18px;
-                color: #b0b0b0;
-            }
-        """)
+        subtitle.setStyleSheet(Styles.label_subtitle())
         layout.addWidget(subtitle, alignment=Qt.AlignCenter)
 
         google_login_btn = QPushButton("Entrar com Google")
-        google_login_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #4285F4;
-                color: white;
-                border: none;
-                padding: 15px 30px;
-                border-radius: 8px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #357ae8;
-            }
-            QPushButton:pressed {
-                background-color: #2d67cb;
-            }
-        """)
+        google_login_btn.setStyleSheet(Styles.primary_button())
         google_login_btn.clicked.connect(self.handle_google_login)
         layout.addWidget(google_login_btn, alignment=Qt.AlignCenter)
 
         self.status_label = QLabel("")
-        self.status_label.setStyleSheet("""
-            QLabel {
-                color: red;
-                font-size: 14px;
-            }
-        """)
+        self.status_label.setStyleSheet(f"color: {Colors.ERROR}; font-size: {Typography.SIZE_NORMAL};")
         layout.addWidget(self.status_label, alignment=Qt.AlignCenter)
 
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #282c34;
-            }
-        """)
+        self.setStyleSheet(f"QWidget {{ background-color: {Colors.BG_PRIMARY}; }}")
 
     def handle_google_login(self):
         if self.google_authenticator.login_google(self):
-            self.status_label.setStyleSheet("color: green;")
+            self.status_label.setStyleSheet(f"color: {Colors.SUCCESS};")
             self.status_label.setText("Login realizado com sucesso!")
             self.main_window.show()
             self.close()
         else:
-            self.status_label.setStyleSheet("color: red;")
+            self.status_label.setStyleSheet(f"color: {Colors.ERROR};")
             self.status_label.setText("Falha no login. Tente novamente.")
 
-
     def apply_global_styles(self):
-        try:
-            with open("assets/styles.css", "r") as f:
-                self.setStyleSheet(self.styleSheet() + f.read())
-        except FileNotFoundError:
-            print("⚠ Arquivo \'styles.css\' não encontrado. O aplicativo usará o estilo padrão.")
-
-
+        self.setStyleSheet(Styles.main_window())
