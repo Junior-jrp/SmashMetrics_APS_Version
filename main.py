@@ -7,7 +7,7 @@ from core.google_auth import GoogleAuthenticator
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    icon_path = "logo_smashmetrics_removebg_preview_CD6_icon.ico"
+    icon_path = "assets/logos/logo_smashmetrics_removebg_preview_CD6_icon.ico"
     app.setWindowIcon(QIcon(icon_path))
 
     try:
@@ -17,7 +17,6 @@ if __name__ == "__main__":
         print("⚠ Arquivo \'styles.css\' não encontrado. O aplicativo usará o estilo padrão.")
 
     google_authenticator = GoogleAuthenticator()
-
     main_window = SmashMetricsUI()
     main_window.setWindowIcon(QIcon(icon_path))
 

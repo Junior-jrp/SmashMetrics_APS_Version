@@ -415,6 +415,12 @@ class SmashMetricsUI(QMainWindow):
     def apply_global_styles(self):
         self.setStyleSheet(Styles.main_window())
 
+    def closeEvent(self, event):
+
+        if hasattr(self, "google_authenticator"):
+            self.google_authenticator.logout(self)
+        event.accept()
+
 
 class LoginScreen(QWidget):
     def __init__(self, main_window, google_authenticator):
