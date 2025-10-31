@@ -27,6 +27,7 @@ backup.sql
 *.tmp
 *.temp
 ~*
+*.pyc
 
 # Sistema operacional
 .DS_Store

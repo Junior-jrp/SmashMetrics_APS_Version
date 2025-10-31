@@ -159,10 +159,15 @@ class SmashMetricsUI(QMainWindow):
         main_layout.addWidget(sidebar)
 
     def handle_exit_and_logout(self):
-        self.google_authenticator.logout(self)
         self.close()
         if self.nav_buttons:
             self.nav_buttons[0].setChecked(True)
+
+    def closeEvent(self, event):
+
+        if hasattr(self, "google_authenticator"):
+            self.google_authenticator.logout(self)
+        event.accept()
 
     def setup_screens(self):
         self.dashboard_widget = self.create_dashboard_screen()

@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QMessageBox, QInputDialog
 from core.database import DatabaseManager, AnaliseCRUD
 
 
+
 class AnalysisEngine:
     def __init__(self, ui_context, image_processor):
         self.ui = ui_context
